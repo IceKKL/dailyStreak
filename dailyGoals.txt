@@ -1,8 +1,6 @@
-2025-11-11
-{python (completed)} {work out} {poe (completed)}
 2025-11-12
-{python} {poe} {college}
+{python (completed)} {poe (completed)} {college (completed)}
 2025-11-13
-{python (completed)} {work out (completed)} {poe (completed)}
+{python (completed)} {ice bathing (completed)} {poe (completed)}
 2025-11-14
-{Gym} {Python} {College}
+{Work out} {Python} {Gaming}

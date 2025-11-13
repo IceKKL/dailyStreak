@@ -4,12 +4,10 @@ import sys
 import time
 
 # All the needed days
+dayBeforeYesterday = dt.date.today() - dt.timedelta(days=2)
 yesterday = dt.date.today() - dt.timedelta(days=1)
-yesterdayStr = str(yesterday)
 today = dt.date.today()
-todayStr = str(today)
 tomorrow = dt.date.today() + dt.timedelta(days=1)
-tomorrowStr = str(tomorrow)
 
 def createMenu(): # main function of the app
     #infinite loop to have the menu always fresh
@@ -19,14 +17,17 @@ def createMenu(): # main function of the app
 
         # goals info cluster
         daysGoals(today)
-        if completedAllGoals():
-            print("\n Completed all goals, great job!\n")
+        if completedAllGoals(today):
+            print("\nCompleted all goals, great job!")
+            checkStreak(today)
+        else:
+            checkStreak(yesterday)
         daysGoals(tomorrow)
 
         # options
         print("\n1. Mark goal as complete.")
-        print("\n2. Add goals for tomorrow.")
-        print("\nX. Exit.")
+        print("2. Add goals for tomorrow.")
+        print("X. Exit.")
 
         # infinite function for the choices, makes it easy to backtrack in case of a missclick
         while True:
@@ -54,9 +55,9 @@ def daysGoals(day): # shows the goals for current day
     printing = False
 
     if day == today:
-        print("Today's goals:")
+        print("\nToday's goals:")
     elif day == tomorrow:
-        print("Tomorrow's goals:")
+        print("\nTomorrow's goals:")
 
     # check the goals set for the sent day (today | tomorrow)
     for line in lines:
@@ -107,7 +108,7 @@ def addGoals(): # function to add goals for the next day
     found = False
     # if found tomorrow's date, append new goals to old ones
     for index, line in enumerate(lines):
-        if tomorrowStr in line:
+        if str(tomorrow) in line:
             found = True
             newIndex = index + 1
             # if our newIndex is lesser than len of lines, that means that there already are goals set for the next day
@@ -122,7 +123,7 @@ def addGoals(): # function to add goals for the next day
             break
     # if we haven't found tomorrow's date, we put it in
     if not found:
-        lines.append(f"{tomorrowStr}\n")
+        lines.append(f"{str(tomorrow)}\n")
         lines.append(" ".join([f"{{{goal}}}" for goal in goalList]) + "\n")
 
     with open("dailyGoals.txt", "w", encoding="utf-8") as file:
@@ -131,7 +132,7 @@ def addGoals(): # function to add goals for the next day
     daysGoals(tomorrow)
 
 def completeGoals(): # function for showing goal progress
-    if completedAllGoals():
+    if completedAllGoals(today):
         print("\n What are you looking for? You completed all your goals, great job!\n")
         return
 
@@ -153,7 +154,7 @@ def completeGoals(): # function for showing goal progress
         for line in lines:
             stripped = line.rstrip("\n")
 
-            if stripped == todayStr:
+            if stripped == str(today):
                 printing = True
                 newLines.append(stripped + "\n")
                 continue
@@ -184,9 +185,11 @@ def completeGoals(): # function for showing goal progress
         with open("dailyGoals.txt", "w", encoding="utf-8") as file:
             file.writelines(newLines)
 
+        if completedAllGoals(today):
+            checkStreak(today)
         daysGoals(today)
 
-def completedAllGoals(): # function to check if all goals have been completed
+def completedAllGoals(day): # function to check if all goals have been completed
     with open ("dailyGoals.txt", "r", encoding="utf-8") as file:
         lines = file.readlines()
 
@@ -196,7 +199,7 @@ def completedAllGoals(): # function to check if all goals have been completed
     for line in lines:
         line = line.rstrip("\n")
 
-        if line.strip() == todayStr:
+        if line.strip() == str(day):
             printing = True
             continue
 
@@ -221,5 +224,49 @@ def completedAllGoals(): # function to check if all goals have been completed
 def clearScreen(): # function to clear the screen
     os.system("cls" if os.name == "nt" else "clear")
 
-def checkStreak(): # function to check, and extend | stop count of daily goal streak
-    print("check")
+def checkStreak(day): # function to check, and extend | stop count of daily goal streak
+    with open("dailyStreak.txt", "a+", encoding="utf-8") as file:
+        # set cursor at the start of the file
+        file.seek(0)
+        lines = file.readlines()
+
+        yesterday = day - dt.timedelta(days=1)
+        streak = 0
+
+        isDayPresent = False
+        # if yesterday is already present in the file, don't change the streak
+        for line in lines:
+            if str(day) in line:
+                isDayPresent = True
+                streak = streakCount(lines, day)
+                break
+
+        if isDayPresent == False:
+            # if goals have been completed add a point, else set streak as 0
+            streak = streakCount(lines, yesterday)
+            if completedAllGoals(day):
+                streak = streak + 1
+            else:
+                streak = 0
+            file.write(f"{day} streak = {streak}\n")
+    print("Your current streak is: ", streak)
+
+def streakCount(lines, day):
+    streakStr = ""
+    isInside = False
+    streak = 0
+
+    for line in lines:
+        # check the streak count from selected day
+        if str(day) in line:
+            for char in line:
+                if char == "=":
+                    isInside = True
+                    continue
+                if char == "\n":
+                    isInside = False
+                    continue
+                if isInside:
+                    streakStr += char
+            streak = int(streakStr.strip())
+    return streak
