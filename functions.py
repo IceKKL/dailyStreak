@@ -1,7 +1,9 @@
 import os
 import datetime as dt
+import re
 import sys
 import time
+import calendar
 
 # All the needed days
 dayBeforeYesterday = dt.date.today() - dt.timedelta(days=2)
@@ -9,27 +11,28 @@ yesterday = dt.date.today() - dt.timedelta(days=1)
 today = dt.date.today()
 tomorrow = dt.date.today() + dt.timedelta(days=1)
 
-def createMenu(): # main function of the app
+def createMenu():  # main function of the app
     #infinite loop to have the menu always fresh
     while True:
-        clearScreen()
-        print("dailyStreak \n")
+        #clearScreen()
+        #print("dailyStreak".center(50, "-"))
 
         # goals info cluster
-        daysGoals(today)
+        #daysGoals(today)
         if completedAllGoals(today):
             print("\nCompleted all goals, great job!")
             checkStreak(today)
         else:
             checkStreak(yesterday)
-        daysGoals(tomorrow)
+        #createCalendarGrid()
+        #daysGoals(tomorrow)
 
         # options
         print("\n1. Mark goal as complete.")
         print("2. Add goals for tomorrow.")
         print("X. Exit.")
 
-        # infinite function for the choices, makes it easy to backtrack in case of a missclick
+        # infinite function for the choices, makes it easy to backtrack in case of a miss input
         while True:
             match input("> ").strip().lower():
                 case "1":
@@ -45,10 +48,11 @@ def createMenu(): # main function of the app
                     print("Please enter a valid input.")
         time.sleep(2)
 
-def daysGoals(day): # shows the goals for current day
+
+def daysGoals(day):  # shows the goals for current day
     dayStr = str(day)
 
-    with open ("dailyGoals.txt", "r", encoding="utf-8") as file:
+    with open("dailyGoals.txt", "r", encoding="utf-8") as file:
         lines = file.readlines()
 
     found = False
@@ -89,7 +93,8 @@ def daysGoals(day): # shows the goals for current day
     if day == tomorrow and not found:
         print("No goals found for tomorrow, do you want to add some?")
 
-def addGoals(): # function to add goals for the next day
+
+def addGoals():  # function to add goals for the next day
 
     goals = input("how many goals do you want? ")
     print("Input your goals: ")
@@ -131,7 +136,8 @@ def addGoals(): # function to add goals for the next day
 
     daysGoals(tomorrow)
 
-def completeGoals(): # function for showing goal progress
+
+def completeGoals():  # function for showing goal progress
     if completedAllGoals(today):
         print("\n What are you looking for? You completed all your goals, great job!\n")
         return
@@ -189,8 +195,9 @@ def completeGoals(): # function for showing goal progress
             checkStreak(today)
         daysGoals(today)
 
-def completedAllGoals(day): # function to check if all goals have been completed
-    with open ("dailyGoals.txt", "r", encoding="utf-8") as file:
+
+def completedAllGoals(day):  # function to check if all goals have been completed
+    with open("dailyGoals.txt", "r", encoding="utf-8") as file:
         lines = file.readlines()
 
     printing = False
@@ -218,13 +225,16 @@ def completedAllGoals(day): # function to check if all goals have been completed
                         goalsCompleted = False
                     continue
                 word += char
-
+    if printing == False:
+        goalsCompleted = False
     return goalsCompleted
 
-def clearScreen(): # function to clear the screen
+
+def clearScreen():  # function to clear the screen
     os.system("cls" if os.name == "nt" else "clear")
 
-def checkStreak(day): # function to check, and extend | stop count of daily goal streak
+
+def checkStreak(day):  # function to check, and extend | stop count of daily goal streak
     with open("dailyStreak.txt", "a+", encoding="utf-8") as file:
         # set cursor at the start of the file
         file.seek(0)
@@ -249,7 +259,8 @@ def checkStreak(day): # function to check, and extend | stop count of daily goal
             else:
                 streak = 0
             file.write(f"{day} streak = {streak}\n")
-    print("Your current streak is: ", streak)
+    print("Your current streak is: ", streak , "\n")
+
 
 def streakCount(lines, day):
     streakStr = ""
@@ -270,3 +281,64 @@ def streakCount(lines, day):
                     streakStr += char
             streak = int(streakStr.strip())
     return streak
+
+
+def loadCompletedDays():
+    completedDays = set()
+    datePattern = r"^\d{4}-\d{2}-\d{2}$"
+
+    with open("dailyGoals.txt", "r", encoding="utf-8") as file:
+        lines = [line.strip() for line in file.readlines()]
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        if re.match(datePattern, line):
+            currentDate = dt.datetime.strptime(line, "%Y-%m-%d").date()
+
+            taskLine = lines[i + 1] if (i + 1) < len(lines) else ""
+            tasksList = re.findall(r"\{([^}]*)\}", taskLine)
+
+            if tasksList and all("(completed)" in task for task in tasksList):
+                if currentDate.year == dt.datetime.now().year and \
+                   currentDate.month == dt.datetime.now().month:
+                    completedDays.add(currentDate.day)
+
+            i += 2
+        else:
+            i += 1
+
+    return completedDays
+
+
+def createCalendarGrid():
+    doneDays = loadCompletedDays()
+
+    calendarDataSheet = calendar.Calendar(firstweekday=0)
+    year = dt.datetime.now().year
+    month = dt.datetime.now().month
+
+
+    header = f"{calendar.month_name[month]} {year}"
+    weekHeader = calendar.weekheader(3)
+    printLines = []
+    printLines.append(header.center(30))
+    printLines.append(weekHeader)
+
+    calendarMatrix = calendarDataSheet.monthdayscalendar(year, month)
+
+    for week in calendarMatrix:
+        printLine_items = []
+        for day in week:
+            if day == 0:
+                cell = "   "
+            else:
+                day_str = str(day).rjust(2)
+                status = "✓" if day in doneDays else " "
+                cell = f"{day_str}{status}"
+            printLine_items.append(cell)
+        printLines.append(" ".join(printLine_items))
+
+    print("\n".join(printLines))
+
