@@ -18,14 +18,15 @@ def createMenu():  # main function of the app
         #print("dailyStreak".center(50, "-"))
 
         # goals info cluster
-        #daysGoals(today)
+        daysGoals(today)
         if completedAllGoals(today):
             print("\nCompleted all goals, great job!")
             checkStreak(today)
         else:
             checkStreak(yesterday)
-        #createCalendarGrid()
-        #daysGoals(tomorrow)
+        goalsList(today)
+        createCalendarGrid()
+        daysGoals(tomorrow)
 
         # options
         print("\n1. Mark goal as complete.")
@@ -36,7 +37,7 @@ def createMenu():  # main function of the app
         while True:
             match input("> ").strip().lower():
                 case "1":
-                    completeGoals()
+                    completeGoals(today)
                     break
                 case "2":
                     addGoals()
@@ -137,64 +138,71 @@ def addGoals():  # function to add goals for the next day
     daysGoals(tomorrow)
 
 
-def completeGoals():  # function for showing goal progress
-    if completedAllGoals(today):
-        print("\n What are you looking for? You completed all your goals, great job!\n")
+def completeGoals(day):
+    if completedAllGoals(day):
+        print("\nWhat are you looking for? You completed all your goals, great job!\n")
         return
 
-    #show today's goals
-    daysGoals(today)
-    print("Which goal do you want to mark as complete? If no goals completed type: 'none'")
-    completedGoal = input("> ").strip()
-    ## TODO: Make it, so that it has to match with one of the goals, otherwise make the user input once more
-    if completedGoal == "none":
-        print("No goals have been marked as completed:")
-    else:
+    while True:
+        daysGoals(day)
+        print("What goal have you completed?")
+        completedGoal = input("> ").lower()
 
-        with open("dailyGoals.txt", "r", encoding="utf-8") as file:
-            lines = file.readlines()
+        listOfGoals = goalsList(day)
 
-        newLines = []
-        printing = False
+        if completedGoal in listOfGoals:
+            with open("dailyGoals.txt", "r", encoding="utf-8") as file:
+                lines = file.readlines()
 
-        for line in lines:
-            stripped = line.rstrip("\n")
+            newLines = []
+            printing = False
 
-            if stripped == str(today):
-                printing = True
-                newLines.append(stripped + "\n")
-                continue
+            for line in lines:
+                stripped = line.rstrip("\n")
 
-            # if we find another date, stop printing
-            if printing and stripped.startswith("2025-"):
-                printing = False
+                if stripped == str(day):
+                    printing = True
+                    newLines.append(stripped + "\n")
+                    continue
 
-            if printing:
-                goals = []
-                word = ""
-                for char in stripped:
-                    if char == "{":
-                        word = ""
-                        continue
-                    elif char == "}":
-                        goalText = word.strip()
-                        # if we find our completedGoal, we append (completed) to it
-                        if goalText == completedGoal:
-                            goalText += " (completed)"
-                        goals.append(f"{{{goalText}}}")
-                        continue
-                    word += char
-                newLines.append(" ".join(goals) + "\n")
-            else:
-                newLines.append(line)
+                # if we find another date, stop printing
+                if printing and stripped.startswith("2025-"):
+                    printing = False
 
-        with open("dailyGoals.txt", "w", encoding="utf-8") as file:
-            file.writelines(newLines)
+                if printing:
+                    goals = []
+                    word = ""
+                    for char in stripped:
+                        if char == "{":
+                            word = ""
+                            continue
+                        elif char == "}":
+                            goalText = word.strip().lower()
+                            # if we find our completedGoal, we append (completed) to it
+                            if goalText == completedGoal:
+                                goalText += " (completed)"
+                            goals.append(f"{{{goalText}}}")
+                            continue
+                        word += char
+                    newLines.append(" ".join(goals) + "\n")
+                else:
+                    newLines.append(line)
 
-        if completedAllGoals(today):
-            checkStreak(today)
-        daysGoals(today)
+            with open("dailyGoals.txt", "w", encoding="utf-8") as file:
+                file.writelines(newLines)
 
+            if completedAllGoals(today):
+                checkStreak(today)
+            daysGoals(today)
+
+            if completedAllGoals(today):
+                checkStreak(today)
+            daysGoals(today)
+
+            break
+        else:
+            print("Try again")
+            continue
 
 def completedAllGoals(day):  # function to check if all goals have been completed
     with open("dailyGoals.txt", "r", encoding="utf-8") as file:
@@ -298,7 +306,7 @@ def loadCompletedDays():
             currentDate = dt.datetime.strptime(line, "%Y-%m-%d").date()
 
             taskLine = lines[i + 1] if (i + 1) < len(lines) else ""
-            tasksList = re.findall(r"\{([^}]*)\}", taskLine)
+            tasksList = re.findall(r"\{([^}]*)}", taskLine)
 
             if tasksList and all("(completed)" in task for task in tasksList):
                 if currentDate.year == dt.datetime.now().year and \
@@ -341,4 +349,36 @@ def createCalendarGrid():
         printLines.append(" ".join(printLine_items))
 
     print("\n".join(printLines))
+
+def goalsList(day):
+    with open("dailyGoals.txt", "r", encoding="utf-8") as file:
+        lines = file.readlines()
+
+        goalList = []
+        printing = False
+
+        for line in lines:
+            stripped = line.rstrip("\n")
+
+            if stripped == str(day):
+                printing = True
+                continue
+
+            # if we find another date, stop printing
+            if printing and stripped.startswith("2025-"):
+                printing = False
+
+            if printing:
+                word = ""
+                for char in stripped:
+                    if char == "{":
+                        word = ""
+                        continue
+                    elif char == "}":
+                        goalText = word.strip().lower()
+                        # if we find our completedGoal, we append (completed) to it
+                        goalList.append(f"{goalText}")
+                        continue
+                    word += char
+        return goalList
 
